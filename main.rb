@@ -10,6 +10,20 @@ get '/' do
   erb :index, { :locals => { :posts => posts } }
 end
 
+get '/star' do
+  post_id = params["post_id"].to_i
+  post = db.execute("SELECT star_count FROM posts WHERE id = ?", post_id)
+  if post.empty?
+    return "error"
+  end
+
+  new_star_count = post[0]["star_count"] + 1
+  stmt = db.prepare("UPDATE posts SET star_count = ? WHERE id = ?")
+  stmt.bind_params(new_star_count, post_id)
+  stmt.execute
+  return "スターを付けました"
+end
+
 get '/hello' do
   "Hello world"
 end
@@ -24,7 +38,7 @@ post '/' do
   if params["file"]
     ext = ""
     if params["file"][:type].include? "jpeg"
-      ext = "jpeg"
+      ext = "jpg"
     elsif params["file"][:type].include? "png"
       ext = "png"
     else
@@ -42,7 +56,7 @@ post '/' do
     return "画像が必須です"
   end
 
-  stmt.db("INSERT INTO posts (text, img_file_name) VALUES (?, ?)")
+  stmt = db.prepare("INSERT INTO posts (text, img_file_name) VALUES (?, ?)")
   stmt.bind_params(params["ex_text"], file_name)
   stmt.execute
   redirect '/'
